@@ -33,29 +33,42 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // handles google login button click
   _handleGoogleBtnClick() {
-    //for showing progress bar
-    Dialogs.showProgressBar(context);
+  // Showing progress bar
+  Dialogs.showProgressBar(context);
 
-    _signInWithGoogle().then((user) async {
-      //for hiding progress bar
-      Navigator.pop(context);
+  _signInWithGoogle().then((user) async {
+    // Hiding progress bar
+    Navigator.pop(context);
 
-      if (user != null) {
-        log('\nUser: ${user.user}');
-        log('\nUserAdditionalInfo: ${user.additionalUserInfo}');
+    if (user != null) {
+      log('User: ${user.user}');
+      log('UserAdditionalInfo: ${user.additionalUserInfo}');
 
-        if (await APIs.userExists() && mounted) {
+      if (await APIs.userExists()) {
+        log('User exists. Navigating to HomeScreen.');
+        if (mounted) {
           Navigator.pushReplacement(
-              context, MaterialPageRoute(builder: (_) => const HomeScreen()));
-        } else {
-          await APIs.createUser().then((value) {
-            Navigator.pushReplacement(
-                context, MaterialPageRoute(builder: (_) => const HomeScreen()));
-          });
+            context, MaterialPageRoute(builder: (_) => const HomeScreen()));
         }
+      } else {
+        log('User does not exist. Creating new user.');
+        await APIs.createUser().then((value) {
+          if (mounted) {
+            Navigator.pushReplacement(
+              context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+          }
+        });
       }
-    });
-  }
+    } else {
+      log('Google Sign-In failed.');
+    }
+  }).catchError((error) {
+    // Hiding progress bar in case of error
+    Navigator.pop(context);
+    log('Sign-In error: $error');
+  });
+}
+
 
   Future<UserCredential?> _signInWithGoogle() async {
     try {
@@ -78,9 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       log('\n_signInWithGoogle: $e');
 
-      if (mounted) {
-        Dialogs.showSnackbar(context, 'Something Went Wrong (Check Internet!)');
-      }
+      
 
       return null;
     }
